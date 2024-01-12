@@ -1,4 +1,4 @@
-package br.com.mike.modelo;
+package br.com.mike.seguranca.modelo;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;

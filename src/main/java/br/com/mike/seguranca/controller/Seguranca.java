@@ -1,7 +1,7 @@
-package br.com.mike.controller;
+package br.com.mike.seguranca.controller;
 
-import br.com.mike.records.AutenticacaoRecord;
-import br.com.mike.records.TokenRecord;
+import br.com.mike.comum.records.AutenticacaoRecord;
+import br.com.mike.comum.records.TokenRecord;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(value = "/seguranca")
 public class Seguranca {
 
-    private final br.com.mike.negocio.Seguranca seguranca = new br.com.mike.negocio.Seguranca();
+    private final br.com.mike.seguranca.negocio.Seguranca seguranca = new br.com.mike.seguranca.negocio.Seguranca();
 
     @GetMapping(value = "/validarToken")
     public ResponseEntity<AutenticacaoRecord> validarToken(@RequestParam("token") String token) throws Exception{

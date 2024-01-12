@@ -1,6 +1,6 @@
-package br.com.mike.token;
+package br.com.mike.seguranca.token;
 
-import br.com.mike.modelo.Autenticacao;
+import br.com.mike.seguranca.modelo.Autenticacao;
 import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers;
 import org.jose4j.jwe.JsonWebEncryption;

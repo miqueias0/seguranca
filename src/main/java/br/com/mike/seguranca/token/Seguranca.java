@@ -16,6 +16,7 @@ import org.jose4j.lang.ByteUtil;
 import org.jose4j.lang.JoseException;
 
 import java.io.*;
+import java.security.SecureRandom;
 import java.util.Date;
 import java.util.Random;
 
@@ -24,8 +25,8 @@ public class Seguranca {
     private  AesKey privateKey;
     private  AesKey publicKey;
      public Seguranca() throws IOException {
-        privateKey = new AesKey(new BufferedReader(new FileReader(absolutePath("src/main/resources/keys/privateKey.pdf"))).readLine().getBytes());
-        publicKey = new AesKey(new BufferedReader(new FileReader(absolutePath("src/main/resources/keys/publicKey.pdf"))).readLine().getBytes());
+        privateKey = new AesKey(new BufferedReader(new FileReader(absolutePath("src/main/resources/keys/privateKey.txt"))).readLine().getBytes());
+        publicKey = new AesKey(new BufferedReader(new FileReader(absolutePath("src/main/resources/keys/publicKey.txt"))).readLine().getBytes());
     }
 
     public String criarToken(Autenticacao autenticacao) {
@@ -65,7 +66,7 @@ public class Seguranca {
             // facilitate a smooth key rollover process
 
             // Set the signature algorithm on the JWT/JWS that will integrity protect the claims
-            jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA256);
+            jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA512);
 
             // Sign the JWS and produce the compact serialization, which will be the inner JWT/JWS
             // representation, which is a string consisting of three dot ('.') separated
@@ -77,11 +78,11 @@ public class Seguranca {
             JsonWebEncryption jwe = new JsonWebEncryption();
 
             // The output of the ECDH-ES key agreement will encrypt a randomly generated content encryption key
-            jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.A256GCMKW);
+            jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.PBES2_HS512_A256KW);
 
             // The content encryption key is used to encrypt the payload
             // with a composite AES-CBC / HMAC SHA2 encryption algorithm
-            String encAlg = ContentEncryptionAlgorithmIdentifiers.AES_256_GCM;
+            String encAlg = ContentEncryptionAlgorithmIdentifiers.AES_256_CBC_HMAC_SHA_512;
             jwe.setEncryptionMethodHeaderParameter(encAlg);
 
             // We encrypt to the receiver using their public key
@@ -112,13 +113,13 @@ public class Seguranca {
         // It is also typically good to allow only the expected algorithm(s) in the given context
         AlgorithmConstraints jwsAlgConstraints
                 = new AlgorithmConstraints(AlgorithmConstraints.ConstraintType.PERMIT,
-                AlgorithmIdentifiers.HMAC_SHA256);
+                AlgorithmIdentifiers.HMAC_SHA512);
         AlgorithmConstraints jweAlgConstraints
                 = new AlgorithmConstraints(AlgorithmConstraints.ConstraintType.PERMIT,
-                KeyManagementAlgorithmIdentifiers.A256GCMKW);
+                KeyManagementAlgorithmIdentifiers.PBES2_HS512_A256KW);
         AlgorithmConstraints jweEncConstraints = new AlgorithmConstraints(
                 AlgorithmConstraints.ConstraintType.PERMIT,
-                ContentEncryptionAlgorithmIdentifiers.AES_256_GCM);
+                ContentEncryptionAlgorithmIdentifiers.AES_256_CBC_HMAC_SHA_512);
 
         JwtConsumer jwtConsumer = new JwtConsumerBuilder()
                 //.setRequireExpirationTime() // the JWT must have an expiration time
@@ -172,23 +173,35 @@ public class Seguranca {
         return valor;
     }
 
-    private String escolherCatactere(String caractere){
-        return String.valueOf(caractere.toCharArray()[gerarValor(caractere.length())]);
+    private String escolherCatactere(int value){
+        return String.valueOf((char) value);
     }
 
     private String absolutePath(String nomeArquivo){
+        return absolutePath(nomeArquivo, null);
+    }
+
+    private String absolutePath(String nomeArquivo, String nomeAbsoluto){
         try{
             File file = new File(nomeArquivo);
-            nomeArquivo = file.getAbsolutePath();
-            if(file.length() == 0 || new Date().getTime() > file.lastModified() + (1000L * 60 * 60 * 24 * 30)){
-                file.deleteOnExit();
-                file.createNewFile();
-                gerarChave(nomeArquivo);
-            }
-            return nomeArquivo;
+            nomeAbsoluto = file.getAbsolutePath();
+            return gerarArquivo(file, nomeArquivo);
         }catch (Exception ex){
-            return absolutePath(nomeArquivo);
+            try{
+                return gerarArquivo(new File(nomeAbsoluto), nomeAbsoluto);
+            } catch (IOException e) {
+                return absolutePath(nomeArquivo, nomeAbsoluto);
+            }
         }
+    }
+
+    private String gerarArquivo(File file, String nomeArquivo) throws IOException {
+        if(file.length() == 0 || new Date().getTime() > file.lastModified() + (1000L * 60 * 60 * 24 * 30) || !file.exists()){
+            file.deleteOnExit();
+            file.createNewFile();
+            gerarChave(nomeArquivo);
+        }
+        return nomeArquivo;
     }
 
 
@@ -200,13 +213,9 @@ public class Seguranca {
         if (ByteUtil.bitLength(chave.getBytes().length) > maxBit) {
             return chave;
         }
+        SecureRandom random = new SecureRandom();
         while(chaveFinal == null) {
-            String escolha = "";
-            escolha += escolherCatactere("abcdefghijklmnopqrstuvwxyz");
-            escolha += escolherCatactere("1234567890");
-            escolha += escolherCatactere("!@#$%&*()_+}]{[?`^´~<>,.:;/=");
-            escolha += escolherCatactere("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-            chave += escolherCatactere(escolha);
+            chave += escolherCatactere(33 + random.nextInt(93));
             chave = gerarChaveRecursivo(maxBit, minBit, chave, chaveFinal);
             if (ByteUtil.bitLength(chave.getBytes().length) == maxBit) {
                 chaveFinal = chave;
